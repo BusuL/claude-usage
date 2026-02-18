@@ -1,0 +1,27 @@
+{
+  "name": "claude-usage",
+  "version": "1.0.0",
+  "description": "Visualise your Claude Code token usage. One command, zero setup.",
+  "main": "src/index.js",
+  "bin": {
+    "claude-usage": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js --port 3456"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "tokens",
+    "usage",
+    "analytics",
+    "dashboard"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.0",
+    "open": "^10.1.0"
+  }
+}

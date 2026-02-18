@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Usage Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #07080C;
+  --bg2:       #0B0D14;
+  --surf:      #0F1119;
+  --surf2:     #141720;
+  --surf3:     #1A1E2C;
+  --surf4:     #1F2335;
+  --border:    rgba(255,255,255,0.05);
+  --border2:   rgba(255,255,255,0.09);
+  --border3:   rgba(255,255,255,0.14);
+
+  --amber:     #F5A623;
+  --amber2:    #FFBB44;
+  --amber-s:   rgba(245,166,35,0.10);
+  --amber-g:   rgba(245,166,35,0.22);
+
+  --teal:      #22D3AE;
+  --teal-s:    rgba(34,211,174,0.10);
+
+  --coral:     #FF6B6B;
+  --coral-s:   rgba(255,107,107,0.10);
+
+  --sky:       #52A8F0;
+  --sky-s:     rgba(82,168,240,0.10);
+
+  --green:     #3DD68C;
+  --green-s:   rgba(61,214,140,0.10);
+
+  --violet:    #A78BFA;
+  --violet-s:  rgba(167,139,250,0.10);
+
+  --text:      #D0D5E2;
+  --text2:     #8890AA;
+  --text3:     #525870;
+
+  --display:   'Bebas Neue', 'Arial Narrow', sans-serif;
+  --mono:      'IBM Plex Mono', 'Courier New', monospace;
+  --ui:        'Outfit', system-ui, sans-serif;
+
+  --r-xs: 4px;
+  --r-sm: 7px;
+  --r:    11px;
+  --r-lg: 16px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--ui);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Dot-grid texture */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.022) 1px, transparent 1px);
+  background-size: 26px 26px;
+  pointer-events: none; z-index: 0;
+}
+
+/* Amber halo from top-left */
+body::after {
+  content: '';
+  position: fixed;
+  top: -160px; left: -100px;
+  width: 700px; height: 500px;
+  background: radial-gradient(ellipse, rgba(245,166,35,0.07) 0%, transparent 65%);
+  pointer-events: none; z-index: 0;
+}
+
+/* ===== LOADING ===== */
+#loading {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; flex-direction: column; gap: 18px;
+  position: relative; z-index: 10;
+}
+.spinner {
+  width: 30px; height: 30px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--amber);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text {
+  font-family: var(--mono); font-size: 12px;
+  color: var(--text2); letter-spacing: 0.08em;
+}
+
+/* ===== APP SHELL ===== */
+#app { position: relative; z-index: 1; }
+
+/* ===== HEADER ===== */
+.hdr {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(7,8,12,0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.hdr-inner {
+  max-width: 1300px; margin: 0 auto;
+  padding: 0 28px; height: 58px;
+  display: flex; align-items: center; gap: 18px;
+}
+.logo {
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+  text-decoration: none;
+}
+.logo-icon {
+  width: 30px; height: 30px;
+  background: var(--amber-s);
+  border: 1px solid rgba(245,166,35,0.3);
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--amber);
+}
+.logo-icon svg { width: 15px; height: 15px; }
+.logo-name {
+  font-family: var(--display);
+  font-size: 20px; letter-spacing: 0.06em;
+  color: var(--text); line-height: 1;
+}
+.logo-name em { color: var(--amber); font-style: normal; }
+.hdr-space { flex: 1; }
+.hdr-range {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--text2); letter-spacing: 0.05em;
+}
+.date-pills {
+  display: flex; align-items: center; gap: 2px;
+  background: var(--surf); border: 1px solid var(--border2);
+  border-radius: var(--r-sm); padding: 3px;
+}
+.dpill {
+  background: none; border: none;
+  color: var(--text2); padding: 4px 12px;
+  border-radius: 5px; font-size: 11px; font-weight: 600;
+  cursor: pointer; font-family: var(--mono);
+  letter-spacing: 0.05em; transition: all 0.15s;
+}
+.dpill:hover { color: var(--text); background: var(--surf3); }
+.dpill.active { background: var(--amber); color: #07080C; }
+.refresh-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surf); border: 1px solid var(--border2);
+  color: var(--text2); padding: 6px 13px; border-radius: var(--r-sm);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: var(--ui); transition: all 0.15s; letter-spacing: 0.02em;
+}
+.refresh-btn:hover { border-color: var(--amber); color: var(--amber); }
+.refresh-btn svg { width: 12px; height: 12px; }
+
+/* ===== MAIN ===== */
+.main { max-width: 1300px; margin: 0 auto; padding: 36px 28px 80px; }
+
+/* ===== SECTION LABEL ===== */
+.slabel {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 16px;
+}
+.slabel-text {
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  color: var(--text2); text-transform: uppercase; letter-spacing: 0.14em;
+  white-space: nowrap;
+}
+.slabel-line { flex: 1; height: 1px; background: var(--border); }
+
+/* ===== STATS GRID ===== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px; margin-bottom: 12px;
+}
+@media (max-width: 1020px) { .stats-grid { grid-template-columns: repeat(3,1fr); } }
+@media (max-width: 620px)  { .stats-grid { grid-template-columns: repeat(2,1fr); } }
+
+.scard {
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 20px 20px 16px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+  cursor: default;
+}
+.scard::after {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: var(--amber); opacity: 0;
+  transition: opacity 0.2s;
+}
+.scard:hover { border-color: var(--border2); transform: translateY(-1px); }
+.scard:hover::after { opacity: 1; }
+.scard.hi::after { opacity: 1; }
+.scard.hi { border-color: rgba(245,166,35,0.18); background: rgba(245,166,35,0.03); }
+
+.sc-top {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 10px;
+}
+.sc-label {
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  color: var(--text2); text-transform: uppercase; letter-spacing: 0.1em;
+}
+.sc-tip-wrap { position: relative; }
+.sc-tip-btn {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1px solid var(--border2);
+  background: none; cursor: help;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; color: var(--text3);
+}
+.sc-tip {
+  position: absolute; bottom: calc(100% + 8px); right: 0;
+  background: var(--surf4); border: 1px solid var(--border3);
+  color: var(--text); font-family: var(--ui); font-size: 11px;
+  font-weight: 400; line-height: 1.55; padding: 9px 12px;
+  border-radius: var(--r-sm); width: 220px;
+  pointer-events: none; opacity: 0; z-index: 200;
+  transition: opacity 0.15s, transform 0.15s;
+  transform: translateY(4px);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+}
+.sc-tip-wrap:hover .sc-tip { opacity: 1; transform: translateY(0); }
+
+.sc-value {
+  font-family: var(--display);
+  font-size: 54px; line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--text); margin-bottom: 6px;
+}
+@media (max-width: 1200px) { .sc-value { font-size: 42px; } }
+.scard.hi .sc-value { color: var(--amber); }
+.sc-sub {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--text3); letter-spacing: 0.04em;
+}
+
+/* cost note */
+.cost-note {
+  font-family: var(--mono); font-size: 10px; color: var(--text3);
+  letter-spacing: 0.04em; text-align: center; margin-bottom: 40px;
+}
+.cost-note .hl { color: var(--amber); }
+
+/* ===== CHARTS ===== */
+.charts-row {
+  display: grid; grid-template-columns: 5fr 2fr;
+  gap: 12px; margin-bottom: 40px;
+}
+@media (max-width: 860px) { .charts-row { grid-template-columns: 1fr; } }
+
+.chart-card {
+  background: var(--surf); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 24px;
+  transition: border-color 0.2s;
+}
+.chart-card:hover { border-color: var(--border2); }
+.cc-title {
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  color: var(--text2); text-transform: uppercase; letter-spacing: 0.12em;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+}
+.cc-title::before {
+  content: ''; width: 7px; height: 7px;
+  border-radius: 2px; background: var(--amber); flex-shrink: 0;
+}
+canvas { display: block; }
+.cc-legend {
+  display: flex; gap: 18px; margin-top: 14px; flex-wrap: wrap;
+}
+.leg-item {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 10px; color: var(--text2);
+}
+.leg-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+#modelLegend { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+
+/* ===== INSIGHTS ===== */
+.ins-list { margin-bottom: 40px; }
+.ins-card {
+  background: var(--surf); border: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  border-radius: var(--r); padding: 14px 18px;
+  margin-bottom: 8px; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ins-card:hover { background: var(--surf2); }
+.ins-card.warning { border-left-color: var(--amber); }
+.ins-card.info    { border-left-color: var(--sky); }
+.ins-card.neutral { border-left-color: var(--text3); }
+.ins-top { display: flex; align-items: center; gap: 12px; }
+.ins-icon { font-size: 16px; flex-shrink: 0; width: 24px; text-align: center; }
+.ins-title { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; line-height: 1.4; }
+.ins-chev { color: var(--text3); flex-shrink: 0; transition: transform 0.25s; }
+.ins-card.open .ins-chev { transform: rotate(180deg); }
+.ins-body { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+.ins-card.open .ins-body { max-height: 400px; }
+.ins-desc {
+  font-size: 13px; color: var(--text2); line-height: 1.7;
+  padding: 12px 0 4px 36px;
+  border-top: 1px solid var(--border); margin-top: 12px;
+}
+.ins-action {
+  font-size: 13px; color: var(--amber); font-weight: 500;
+  padding: 6px 0 0 36px; line-height: 1.6;
+}
+
+/* ===== TOP PROMPTS ===== */
+.prompts-wrap { margin-bottom: 40px; }
+.prompts-card {
+  background: var(--surf); border: 1px solid var(--border);
+  border-radius: var(--r-lg); overflow: hidden;
+}
+.prow {
+  display: grid; grid-template-columns: 50px 1fr auto;
+  gap: 16px; padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.1s; align-items: start;
+}
+.prow:last-child { border-bottom: none; }
+.prow:hover { background: var(--surf2); }
+.prank {
+  font-family: var(--display); font-size: 34px;
+  color: var(--text3); line-height: 1;
+  text-align: center; padding-top: 3px;
+}
+.prow:nth-child(1) .prank { color: var(--amber); }
+.prow:nth-child(2) .prank { color: var(--teal); }
+.prow:nth-child(3) .prank { color: var(--coral); }
+.ptext {
+  font-size: 14px; font-weight: 500; color: var(--text);
+  line-height: 1.5; margin-bottom: 5px;
+  display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.pmeta {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--text2); margin-bottom: 8px;
+}
+.pbar-track { height: 3px; background: var(--border2); border-radius: 4px; overflow: hidden; }
+.pbar-fill { height: 100%; display: flex; border-radius: 4px; }
+.pbar-in  { background: var(--amber); }
+.pbar-out { background: var(--teal); }
+.ptokens { text-align: right; white-space: nowrap; min-width: 88px; }
+.ptokens .val {
+  font-family: var(--mono); font-size: 15px; font-weight: 600;
+  color: var(--text); letter-spacing: -0.02em; display: block;
+}
+.ptokens .sub {
+  font-family: var(--mono); font-size: 10px; color: var(--text2);
+  margin-top: 3px; display: block;
+}
+.ptokens .cost {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  color: var(--green); margin-top: 2px; display: block;
+}
+
+/* ===== DRILLDOWN ===== */
+.drilldown {
+  background: var(--surf); border: 1px solid var(--border2);
+  border-radius: var(--r-lg); padding: 24px;
+  margin-bottom: 28px; display: none;
+}
+.drilldown.open { display: block; animation: fadeUp 0.25s ease-out; }
+.dd-hdr {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 16px;
+  margin-bottom: 18px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.dd-title { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.4; }
+.dd-meta {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--text2); margin-top: 5px; letter-spacing: 0.03em;
+}
+.dd-close {
+  background: var(--surf3); border: 1px solid var(--border);
+  color: var(--text2); width: 30px; height: 30px;
+  border-radius: var(--r-sm); cursor: pointer; font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all 0.15s;
+}
+.dd-close:hover { border-color: var(--amber); color: var(--amber); }
+.qlist { display: flex; flex-direction: column; gap: 6px; }
+.qitem {
+  display: grid; grid-template-columns: 36px 1fr auto;
+  gap: 14px; padding: 11px 14px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r-sm); align-items: start;
+  transition: border-color 0.1s;
+}
+.qitem:hover { border-color: var(--border2); }
+.qnum {
+  width: 26px; height: 26px; border-radius: var(--r-sm);
+  border: 1px solid var(--border2); font-family: var(--mono);
+  font-size: 11px; color: var(--text2);
+  display: flex; align-items: center; justify-content: center;
+}
+.qprompt { font-size: 13px; color: var(--text); line-height: 1.55; word-break: break-word; }
+.qtoks { text-align: right; white-space: nowrap; }
+.qtoks .total { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text); }
+.qtoks .detail { font-family: var(--mono); font-size: 10px; color: var(--text2); margin-top: 2px; }
+
+/* ===== SESSIONS ===== */
+.sess-wrap { margin-bottom: 40px; }
+.sess-toolbar {
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 12px;
+  margin-bottom: 14px; flex-wrap: wrap;
+}
+.sess-search {
+  background: var(--surf); border: 1px solid var(--border2);
+  color: var(--text); padding: 8px 14px; border-radius: var(--r-sm);
+  font-size: 13px; font-family: var(--ui); width: 300px;
+  outline: none; transition: border-color 0.15s;
+}
+.sess-search::placeholder { color: var(--text3); }
+.sess-search:focus { border-color: var(--amber); }
+.sess-count {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--text2); letter-spacing: 0.06em;
+}
+.sess-card {
+  background: var(--surf); border: 1px solid var(--border);
+  border-radius: var(--r-lg); overflow: hidden;
+}
+.sess-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sess-tbl th {
+  text-align: left; padding: 11px 14px;
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text2); border-bottom: 1px solid var(--border);
+  cursor: pointer; user-select: none;
+  background: var(--bg2); white-space: nowrap;
+  transition: color 0.15s;
+}
+.sess-tbl th:hover { color: var(--text); }
+.sess-tbl th.sorted { color: var(--amber); }
+.sess-tbl td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.sess-tbl tbody tr { cursor: pointer; transition: background 0.1s; }
+.sess-tbl tbody tr:hover td { background: var(--surf2); }
+.sess-tbl tbody tr:last-child td { border-bottom: none; }
+.date-cell {
+  white-space: nowrap; color: var(--text2);
+  font-family: var(--mono); font-size: 11px;
+}
+.proj-tag {
+  font-family: var(--mono); font-size: 10px; color: var(--text3);
+  display: block; margin-top: 2px; max-width: 100px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ppreview {
+  max-width: 280px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+  font-weight: 500; color: var(--text);
+}
+.tnum {
+  font-family: var(--mono); font-size: 12px; font-weight: 500;
+  text-align: right; white-space: nowrap; color: var(--text);
+}
+.cnum {
+  font-family: var(--mono); font-size: 12px; font-weight: 600;
+  text-align: right; white-space: nowrap; color: var(--green);
+}
+.mbadge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px; border-radius: var(--r-xs);
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+}
+.mbadge.model-opus   { background: var(--violet-s); color: var(--violet); border: 1px solid rgba(167,139,250,0.18); }
+.mbadge.model-sonnet { background: var(--teal-s);   color: var(--teal);   border: 1px solid rgba(34,211,174,0.18); }
+.mbadge.model-haiku  { background: var(--amber-s);  color: var(--amber);  border: 1px solid rgba(245,166,35,0.18); }
+.mbadge.model-unknown{ background: var(--surf3);    color: var(--text2);  border: 1px solid var(--border); }
+.mdot { width: 5px; height: 5px; border-radius: 50%; }
+.mbadge.model-opus   .mdot { background: var(--violet); }
+.mbadge.model-sonnet .mdot { background: var(--teal); }
+.mbadge.model-haiku  .mdot { background: var(--amber); }
+
+/* ===== FOOTER ===== */
+.footer {
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  gap: 20px; padding: 22px 28px;
+  max-width: 1300px; margin: 0 auto;
+}
+.flink {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 11px; color: var(--text2);
+  text-decoration: none; letter-spacing: 0.05em; transition: color 0.15s;
+}
+.flink:hover { color: var(--amber); }
+.flink svg { width: 14px; height: 14px; }
+.fsep { color: var(--text3); font-family: var(--mono); font-size: 11px; }
+.ftxt { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.05em; }
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.au  { animation: fadeUp 0.45s ease-out both; }
+.d1  { animation-delay: 0.04s; }
+.d2  { animation-delay: 0.09s; }
+.d3  { animation-delay: 0.14s; }
+.d4  { animation-delay: 0.19s; }
+.d5  { animation-delay: 0.24s; }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">reading sessions...</div>
+</div>
+
+<div id="app" style="display:none">
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div class="hdr-inner">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div class="logo-name">CLAUDE<em>USAGE</em></div>
+      </div>
+      <div class="hdr-space"></div>
+      <span id="dateRange" class="hdr-range"></span>
+      <div class="date-pills" id="dateFilter">
+        <button class="dpill" data-days="7"   onclick="setDateRange(7)">7D</button>
+        <button class="dpill" data-days="30"  onclick="setDateRange(30)">30D</button>
+        <button class="dpill" data-days="90"  onclick="setDateRange(90)">90D</button>
+        <button class="dpill active" data-days="all" onclick="setDateRange(null)">ALL</button>
+      </div>
+      <button class="refresh-btn" onclick="refreshData()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <div class="main">
+
+    <!-- STATS -->
+    <div class="slabel au">
+      <span class="slabel-text">Overview</span>
+      <div class="slabel-line"></div>
+    </div>
+    <div class="stats-grid" id="statsRow"></div>
+    <p class="cost-note au d2">
+      Estimates use Claude API pricing &mdash;
+      <span class="hl">Haiku $0.80 &middot; Sonnet $3.00 &middot; Opus $15.00</span>
+      per 1M input tokens. Max plan = flat fee, this shows equivalent API value.
+    </p>
+
+    <!-- CHARTS -->
+    <div class="slabel au d2">
+      <span class="slabel-text">Usage over time</span>
+      <div class="slabel-line"></div>
+    </div>
+    <div class="charts-row au d3">
+      <div class="chart-card">
+        <div class="cc-title">Tokens per day</div>
+        <canvas id="dailyChart"></canvas>
+        <div class="cc-legend">
+          <div class="leg-item"><div class="leg-dot" style="background:var(--amber)"></div>Read by Claude</div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--teal)"></div>Written by Claude</div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">By model</div>
+        <canvas id="modelChart"></canvas>
+        <div id="modelLegend"></div>
+      </div>
+    </div>
+
+    <!-- INSIGHTS -->
+    <div id="insightsSection" style="display:none">
+      <div class="slabel au">
+        <span class="slabel-text">Insights</span>
+        <div class="slabel-line"></div>
+      </div>
+      <div id="insightsList" class="ins-list au d1"></div>
+    </div>
+
+    <!-- TOP PROMPTS -->
+    <div class="slabel au d3">
+      <span class="slabel-text">Most expensive prompts</span>
+      <div class="slabel-line"></div>
+    </div>
+    <div class="prompts-wrap au d4">
+      <div class="prompts-card" id="topPromptsList"></div>
+    </div>
+
+    <!-- DRILLDOWN -->
+    <div id="drilldown" class="drilldown">
+      <div class="dd-hdr">
+        <div>
+          <div id="drilldownTitle" class="dd-title"></div>
+          <div id="drilldownMeta"  class="dd-meta"></div>
+        </div>
+        <button class="dd-close" onclick="closeDrilldown()">&times;</button>
+      </div>
+      <div id="queryList" class="qlist"></div>
+    </div>
+
+    <!-- SESSIONS -->
+    <div class="slabel au d4">
+      <span class="slabel-text">All sessions</span>
+      <div class="slabel-line"></div>
+    </div>
+    <div class="sess-wrap au d5">
+      <div class="sess-toolbar">
+        <input type="text" class="sess-search" id="searchInput" placeholder="Search prompts, models, projects...">
+        <span id="sessionCount" class="sess-count"></span>
+      </div>
+      <div class="sess-card">
+        <table class="sess-tbl">
+          <thead>
+            <tr>
+              <th data-sort="date">Date</th>
+              <th data-sort="prompt">Prompt</th>
+              <th data-sort="model">Model</th>
+              <th data-sort="queries" style="text-align:right">Messages</th>
+              <th data-sort="total" style="text-align:right" class="sorted">Tokens</th>
+              <th data-sort="input" style="text-align:right">Read</th>
+              <th data-sort="output" style="text-align:right">Written</th>
+              <th data-sort="cost" style="text-align:right">Est. Cost</th>
+            </tr>
+          </thead>
+          <tbody id="sessionsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /.main -->
+
+  <footer>
+    <div class="footer">
+      <a href="https://github.com/BusuL/claude-usage" target="_blank" class="flink">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        BusuL/claude-usage
+      </a>
+      <span class="fsep">/</span>
+      <span class="ftxt">All data stays on your machine</span>
+    </div>
+  </footer>
+
+</div><!-- /#app -->
+
+<script>
+let DATA = null;
+let dateRangeDays = null;
+let currentSort = { key: 'total', dir: 'desc' };
+let searchQuery = '';
+
+// Cache-read tokens are 10x cheaper than regular input tokens
+const PRICING = {
+  haiku:  { input: 0.80,  output: 4.00,  cacheWrite: 1.00,  cacheRead: 0.08  },
+  sonnet: { input: 3.00,  output: 15.00, cacheWrite: 3.75,  cacheRead: 0.30  },
+  opus:   { input: 15.00, output: 75.00, cacheWrite: 18.75, cacheRead: 1.50  },
+};
+function getModelPricing(m) {
+  if (m.includes('haiku')) return PRICING.haiku;
+  if (m.includes('opus'))  return PRICING.opus;
+  return PRICING.sonnet;
+}
+function sessionCost(s) {
+  const p = getModelPricing(s.model);
+  // Use server-provided cache-split fields when available (accurate pricing)
+  if (s.pureInputTokens !== undefined) {
+    return (
+      s.pureInputTokens              * p.input      +
+      s.outputTokens                 * p.output     +
+      (s.cacheWriteTokens || 0)      * p.cacheWrite +
+      (s.cacheReadTokens  || 0)      * p.cacheRead
+    ) / 1_000_000;
+  }
+  // Fallback: assume 80% cache-read to approximate realistic cost
+  const estimatedCacheRead  = s.inputTokens * 0.80;
+  const estimatedPureInput  = s.inputTokens * 0.20;
+  return (
+    estimatedPureInput  * p.input    +
+    s.outputTokens      * p.output   +
+    estimatedCacheRead  * p.cacheRead
+  ) / 1_000_000;
+}
+
+function fmt(n) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 10_000)    return (n / 1_000).toFixed(0) + 'K';
+  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K';
+  return n.toLocaleString();
+}
+function fmtFull(n) { return n.toLocaleString(); }
+function fmtCost(usd) {
+  if (usd >= 1000) return '$' + usd.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  if (usd >= 100)  return '$' + usd.toFixed(0);
+  if (usd >= 1)    return '$' + usd.toFixed(2);
+  if (usd >= 0.01) return '$' + usd.toFixed(3);
+  return '<$0.01';
+}
+function modelClass(m) {
+  if (m.includes('opus'))   return 'model-opus';
+  if (m.includes('sonnet')) return 'model-sonnet';
+  if (m.includes('haiku'))  return 'model-haiku';
+  return 'model-unknown';
+}
+function modelShort(m) {
+  if (m.includes('opus'))   return 'Opus';
+  if (m.includes('sonnet')) return 'Sonnet';
+  if (m.includes('haiku'))  return 'Haiku';
+  return m;
+}
+function projectShort(p) {
+  return p.replace(/^C--Users-[^-]+-?/, '').replace(/^Projects-?/, '').replace(/-/g, '/') || '~';
+}
+function escapeHtml(s) {
+  const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+}
+function formatDate(d) {
+  if (!d) return '';
+  const p = d.split('-');
+  const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${mo[parseInt(p[1])-1]} ${parseInt(p[2])}`;
+}
+
+function getCutoffDate() {
+  if (!dateRangeDays) return null;
+  const d = new Date();
+  d.setDate(d.getDate() - dateRangeDays);
+  return d.toISOString().split('T')[0];
+}
+function getFilteredSessions() {
+  const c = getCutoffDate();
+  return c ? DATA.sessions.filter(s => s.date >= c) : DATA.sessions;
+}
+function getFilteredDailyUsage() {
+  const c = getCutoffDate();
+  return c ? DATA.dailyUsage.filter(d => d.date >= c) : DATA.dailyUsage;
+}
+function getFilteredTopPrompts() {
+  const c = getCutoffDate();
+  return c ? DATA.topPrompts.filter(p => p.date >= c) : DATA.topPrompts;
+}
+function computeTotals(sessions) {
+  const totalTokens       = sessions.reduce((s, x) => s + x.totalTokens, 0);
+  const totalInputTokens  = sessions.reduce((s, x) => s + x.inputTokens, 0);
+  const totalOutputTokens = sessions.reduce((s, x) => s + x.outputTokens, 0);
+  const totalQueries      = sessions.reduce((s, x) => s + x.queryCount, 0);
+  const totalCost         = sessions.reduce((s, x) => s + (x.estimatedCost != null ? x.estimatedCost : sessionCost(x)), 0);
+  return {
+    totalSessions: sessions.length, totalQueries, totalTokens,
+    totalInputTokens, totalOutputTokens, totalCost,
+    avgTokensPerQuery:   totalQueries  > 0 ? Math.round(totalTokens / totalQueries)  : 0,
+    avgTokensPerSession: sessions.length > 0 ? Math.round(totalTokens / sessions.length) : 0,
+  };
+}
+function computeModelBreakdown(sessions) {
+  const map = {};
+  for (const s of sessions) {
+    if (!map[s.model]) map[s.model] = { model: s.model, inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+    map[s.model].inputTokens  += s.inputTokens;
+    map[s.model].outputTokens += s.outputTokens;
+    map[s.model].totalTokens  += s.totalTokens;
+  }
+  return Object.values(map);
+}
+
+function setDateRange(days) {
+  dateRangeDays = days;
+  document.querySelectorAll('.dpill').forEach(btn => {
+    const v = btn.dataset.days === 'all' ? null : parseInt(btn.dataset.days);
+    btn.classList.toggle('active', v === days);
+  });
+  renderAll();
+}
+
+async function fetchData() {
+  const res = await fetch('/api/data');
+  DATA = await res.json();
+  renderAll();
+}
+async function refreshData() {
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  await fetch('/api/refresh');
+  await fetchData();
+}
+
+function renderAll() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  const sessions = getFilteredSessions();
+  const totals   = computeTotals(sessions);
+  renderStats(sessions, totals);
+  renderInsights();
+  renderDailyChart();
+  renderModelChart(sessions);
+  renderTopPrompts();
+  renderSessions();
+}
+
+/* ---- STATS ---- */
+function renderStats(sessions, totals) {
+  const daily = getFilteredDailyUsage();
+  document.getElementById('dateRange').textContent = daily.length > 0
+    ? `${formatDate(daily[0].date)} – ${formatDate(daily[daily.length - 1].date)}`
+    : '';
+
+  const cards = [
+    { label: 'Total Tokens',    value: fmt(totals.totalTokens),
+      sub: `${fmt(totals.totalInputTokens)} read + ${fmt(totals.totalOutputTokens)} written`,
+      tip: 'Everything Claude read plus everything it wrote back.', hi: false },
+    { label: 'Est. API Cost',   value: fmtCost(totals.totalCost),
+      sub: `~${fmtCost(totals.totalCost / Math.max(totals.totalSessions, 1))} per session`,
+      tip: 'Estimated cost at Claude API rates. Max plan pays flat fee — this shows equivalent value.', hi: true },
+    { label: 'Conversations',   value: fmtFull(totals.totalSessions),
+      sub: `~${fmt(totals.avgTokensPerSession)} tokens each`,
+      tip: 'Each Claude Code session counts as one conversation.', hi: false },
+    { label: 'Messages',        value: fmtFull(totals.totalQueries),
+      sub: `~${fmt(totals.avgTokensPerQuery)} tokens each`,
+      tip: 'Every message you sent, including automatic tool calls.', hi: false },
+    { label: 'Claude Wrote',    value: fmt(totals.totalOutputTokens),
+      sub: `${((totals.totalOutputTokens / Math.max(totals.totalTokens, 1)) * 100).toFixed(1)}% of total`,
+      tip: 'Most tokens are spent re-reading context, not generating responses.', hi: false },
+  ];
+
+  document.getElementById('statsRow').innerHTML = cards.map((c, i) => `
+    <div class="scard ${c.hi ? 'hi' : ''} au d${i+1}">
+      <div class="sc-top">
+        <span class="sc-label">${c.label}</span>
+        <span class="sc-tip-wrap">
+          <button class="sc-tip-btn">?</button>
+          <div class="sc-tip">${c.tip}</div>
+        </span>
+      </div>
+      <div class="sc-value">${c.value}</div>
+      <div class="sc-sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+/* ---- INSIGHTS ---- */
+function renderInsights() {
+  const insights = DATA.insights || [];
+  const sec = document.getElementById('insightsSection');
+  if (!insights.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  const emojis = { warning: '⚠️', info: '💡', neutral: '📅' };
+  document.getElementById('insightsList').innerHTML = insights.map(ins => `
+    <div class="ins-card ${ins.type}" onclick="this.classList.toggle('open')">
+      <div class="ins-top">
+        <div class="ins-icon">${emojis[ins.type] || ''}</div>
+        <div class="ins-title">${escapeHtml(ins.title)}</div>
+        <svg class="ins-chev" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 5L7 9L11 5"/></svg>
+      </div>
+      <div class="ins-body">
+        ${ins.description ? `<div class="ins-desc">${escapeHtml(ins.description)}</div>` : ''}
+        ${ins.action      ? `<div class="ins-action">${escapeHtml(ins.action)}</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+/* ---- DAILY CHART ---- */
+function renderDailyChart() {
+  const canvas = document.getElementById('dailyChart');
+  const ctx = canvas.getContext('2d');
+  const data = getFilteredDailyUsage();
+  if (!data.length) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.parentElement.clientWidth - 48;
+  const h = 200;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  const maxT = Math.max(...data.map(d => d.totalTokens));
+  const barW = Math.max(6, Math.min(28, (w - 52) / data.length - 3));
+  const gap = 3, chartH = h - 36, startX = 48;
+
+  ctx.font = '400 10px "IBM Plex Mono", monospace';
+  ctx.fillStyle = '#2A2F42'; ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const y = chartH - (chartH * i / 4) + 8;
+    ctx.fillText(fmt((maxT / 4) * i), startX - 10, y + 3);
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+    ctx.setLineDash([3, 5]);
+    ctx.beginPath(); ctx.moveTo(startX, y); ctx.lineTo(w, y); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  const inGrad = ctx.createLinearGradient(0, chartH + 8, 0, 0);
+  inGrad.addColorStop(0, '#D08800'); inGrad.addColorStop(1, '#F5A623');
+  const outGrad = ctx.createLinearGradient(0, chartH + 8, 0, 0);
+  outGrad.addColorStop(0, '#00A882'); outGrad.addColorStop(1, '#22D3AE');
+
+  data.forEach((d, i) => {
+    const x = startX + i * (barW + gap);
+    const baseY = chartH + 8;
+    const r = Math.min(3, barW / 2);
+    const outH = (d.outputTokens / maxT) * chartH;
+    if (outH > 0) { ctx.fillStyle = outGrad; ctx.beginPath(); rr(ctx, x, baseY - outH, barW, outH, r); ctx.fill(); }
+    const inH = (d.inputTokens / maxT) * chartH;
+    if (inH > 0)  { ctx.fillStyle = inGrad;  ctx.beginPath(); rr(ctx, x, baseY - outH - inH, barW, inH, r); ctx.fill(); }
+  });
+
+  ctx.fillStyle = '#2A2F42'; ctx.textAlign = 'center';
+  ctx.font = '400 10px "IBM Plex Mono", monospace';
+  const step = Math.max(1, Math.floor(data.length / 7));
+  data.forEach((d, i) => {
+    if (i % step === 0 || i === data.length - 1)
+      ctx.fillText(formatDate(d.date), startX + i * (barW + gap) + barW / 2, chartH + 24);
+  });
+}
+
+function rr(ctx, x, y, w, h, r) {
+  if (h <= 0) return;
+  r = Math.min(r, h / 2, w / 2);
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r); ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r); ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+}
+
+/* ---- MODEL CHART ---- */
+function renderModelChart(sessions) {
+  const canvas = document.getElementById('modelChart');
+  const ctx = canvas.getContext('2d');
+  const data = computeModelBreakdown(sessions);
+  if (!data.length) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const size = Math.min(160, canvas.parentElement.clientWidth - 48);
+  canvas.width = size * dpr; canvas.height = size * dpr;
+  canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
+  ctx.scale(dpr, dpr);
+
+  const cx = size/2, cy = size/2, r = size/2 - 6, ir = r * 0.62;
+  const total = data.reduce((s, d) => s + d.totalTokens, 0);
+  const colors = { opus: '#A78BFA', sonnet: '#22D3AE', haiku: '#F5A623' };
+  const getC = m => { for (const [k,c] of Object.entries(colors)) if (m.includes(k)) return c; return '#2A2F42'; };
+
+  let angle = -Math.PI / 2;
+  const slices = [...data].sort((a, b) => b.totalTokens - a.totalTokens);
+  slices.forEach(d => {
+    const sa = (d.totalTokens / total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, angle, angle + sa);
+    ctx.arc(cx, cy, ir, angle + sa, angle, true);
+    ctx.closePath();
+    ctx.fillStyle = getC(d.model); ctx.fill();
+    ctx.strokeStyle = '#07080C'; ctx.lineWidth = 2; ctx.stroke();
+    angle += sa;
+  });
+
+  ctx.fillStyle = '#C8CDD9'; ctx.textAlign = 'center';
+  ctx.font = '600 15px "IBM Plex Mono", monospace';
+  ctx.fillText(fmt(total), cx, cy + 2);
+  ctx.font = '400 10px "IBM Plex Mono", monospace';
+  ctx.fillStyle = '#525870';
+  ctx.fillText('total', cx, cy + 16);
+
+  document.getElementById('modelLegend').innerHTML = slices.map(d => {
+    const pct = ((d.totalTokens / total) * 100).toFixed(1);
+    return `<div class="leg-item"><div class="leg-dot" style="background:${getC(d.model)}"></div>
+      <span><strong>${modelShort(d.model)}</strong> &ndash; ${fmt(d.totalTokens)} <span style="color:var(--text3)">(${pct}%)</span></span>
+    </div>`;
+  }).join('');
+}
+
+/* ---- TOP PROMPTS ---- */
+function renderTopPrompts() {
+  const prompts = getFilteredTopPrompts();
+  if (!prompts.length) return;
+  const maxT = prompts[0].totalTokens;
+  document.getElementById('topPromptsList').innerHTML = prompts.map((p, i) => {
+    const inPct = (p.inputTokens / p.totalTokens) * 100;
+    const bw = Math.max(10, (p.totalTokens / maxT) * 100);
+    const cost = (p.inputTokens * getModelPricing(p.model).input + p.outputTokens * getModelPricing(p.model).output) / 1_000_000;
+    return `<div class="prow" onclick="openDrilldown('${p.sessionId}')">
+      <div class="prank">${String(i + 1).padStart(2, '0')}</div>
+      <div>
+        <div class="ptext">${escapeHtml(p.prompt)}</div>
+        <div class="pmeta">${formatDate(p.date)} &middot; ${modelShort(p.model)}</div>
+        <div class="pbar-track" style="width:${bw}%">
+          <div class="pbar-fill">
+            <div class="pbar-in"  style="width:${inPct}%"></div>
+            <div class="pbar-out" style="width:${100-inPct}%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="ptokens">
+        <span class="val">${fmt(p.totalTokens)}</span>
+        <span class="sub">${fmt(p.inputTokens)}r / ${fmt(p.outputTokens)}w</span>
+        <span class="cost">${fmtCost(cost)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ---- SESSIONS ---- */
+function renderSessions() {
+  let sessions = getFilteredSessions();
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    sessions = sessions.filter(s =>
+      s.firstPrompt.toLowerCase().includes(q) ||
+      s.model.toLowerCase().includes(q) ||
+      projectShort(s.project).toLowerCase().includes(q)
+    );
+  }
+  const sortFns = {
+    date:    (a, b) => (a.timestamp||'').localeCompare(b.timestamp||''),
+    prompt:  (a, b) => a.firstPrompt.localeCompare(b.firstPrompt),
+    model:   (a, b) => a.model.localeCompare(b.model),
+    queries: (a, b) => a.queryCount - b.queryCount,
+    total:   (a, b) => a.totalTokens - b.totalTokens,
+    input:   (a, b) => a.inputTokens - b.inputTokens,
+    output:  (a, b) => a.outputTokens - b.outputTokens,
+    cost:    (a, b) => sessionCost(a) - sessionCost(b),
+  };
+  const fn = sortFns[currentSort.key] || sortFns.total;
+  sessions.sort((a, b) => currentSort.dir === 'desc' ? fn(b, a) : fn(a, b));
+
+  document.getElementById('sessionCount').textContent = `${sessions.length} sessions`;
+  document.getElementById('sessionsBody').innerHTML = sessions.map(s => `
+    <tr onclick="openDrilldown('${s.sessionId}')">
+      <td class="date-cell">
+        ${formatDate(s.date)}
+        <span class="proj-tag" title="${escapeHtml(projectShort(s.project))}">${escapeHtml(projectShort(s.project))}</span>
+      </td>
+      <td><div class="ppreview" title="${escapeHtml(s.firstPrompt)}">${escapeHtml(s.firstPrompt)}</div></td>
+      <td><span class="mbadge ${modelClass(s.model)}"><span class="mdot"></span>${modelShort(s.model)}</span></td>
+      <td class="tnum">${s.queryCount}</td>
+      <td class="tnum" style="font-weight:700">${fmt(s.totalTokens)}</td>
+      <td class="tnum">${fmt(s.inputTokens)}</td>
+      <td class="tnum">${fmt(s.outputTokens)}</td>
+      <td class="cnum">${fmtCost(sessionCost(s))}</td>
+    </tr>`).join('');
+}
+
+document.querySelectorAll('.sess-tbl th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    currentSort = currentSort.key === key
+      ? { key, dir: currentSort.dir === 'desc' ? 'asc' : 'desc' }
+      : { key, dir: 'desc' };
+    document.querySelectorAll('.sess-tbl th').forEach(t => t.classList.remove('sorted'));
+    th.classList.add('sorted');
+    renderSessions();
+  });
+});
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchQuery = e.target.value;
+  renderSessions();
+});
+
+/* ---- DRILLDOWN ---- */
+function openDrilldown(sessionId) {
+  const s = DATA.sessions.find(x => x.sessionId === sessionId);
+  if (!s) return;
+  const cost = sessionCost(s);
+  document.getElementById('drilldownTitle').textContent = s.firstPrompt.substring(0, 140);
+  document.getElementById('drilldownMeta').textContent =
+    `${formatDate(s.date)} · ${modelShort(s.model)} · ${s.queryCount} messages · ${fmt(s.totalTokens)} tokens · ${fmtCost(cost)}`;
+
+  const grouped = [];
+  let cur = null;
+  for (const q of s.queries) {
+    if (q.userPrompt) {
+      if (cur) grouped.push(cur);
+      cur = { prompt: q.userPrompt, inputTokens: q.inputTokens, outputTokens: q.outputTokens, totalTokens: q.totalTokens, continuations: 0 };
+    } else if (cur) {
+      cur.inputTokens  += q.inputTokens;
+      cur.outputTokens += q.outputTokens;
+      cur.totalTokens  += q.totalTokens;
+      cur.continuations++;
+    }
+  }
+  if (cur) grouped.push(cur);
+
+  document.getElementById('queryList').innerHTML = grouped.map((q, i) => {
+    const cont = q.continuations > 0 ? ` + ${q.continuations} tool uses` : '';
+    return `<div class="qitem">
+      <div class="qnum">${i + 1}</div>
+      <div class="qprompt">${escapeHtml(q.prompt.substring(0, 500))}</div>
+      <div class="qtoks">
+        <div class="total">${fmt(q.totalTokens)}</div>
+        <div class="detail">${fmt(q.inputTokens)}r / ${fmt(q.outputTokens)}w${cont}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const panel = document.getElementById('drilldown');
+  panel.classList.add('open');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closeDrilldown() {
+  document.getElementById('drilldown').classList.remove('open');
+}
+
+fetchData();
+window.addEventListener('resize', () => {
+  if (DATA) { renderDailyChart(); renderModelChart(getFilteredSessions()); }
+});
+</script>
+</body>
+</html>
